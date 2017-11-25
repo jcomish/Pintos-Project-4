@@ -20,6 +20,8 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+static int load_avg;
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -50,6 +52,9 @@ static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
 
+/*17.14 Fixed point format*/
+#define FIXED_POINT_BASE 16384
+static int count= 0;
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
@@ -92,7 +97,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
+  load_avg = 0;
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -349,23 +354,42 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  thread_current()->nice = nice;
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
+}
+
+
+void thread_set_load_avg(void){
+  /*17.14 format represents 59/60 = 16110.9, 1/60 = 273.067
+   f = 2^14 = 16384*, f/2 = 8190,
+   load_avg should be between 0 -1, or 0 - 100 for int
+  */
+	//count = count + 1; 
+	//printf("counting inside: %d\n",count);
+ 	//printf("timerticks: %d\n",timer_ticks());
+	 int ready_threads = list_size(&ready_list); 
+	// printf ("ready threads #%d", ready_threads);
+	 struct thread *cur = thread_current();
+	 if (cur != idle_thread) {
+       		 ready_threads = ready_threads + 1;
+	 }
+ 	 int temp = 16111 * load_avg / 100 + 273 * ready_threads;
+        // printf ("fixed point temp %d\n", temp);
+ 	 load_avg  = (temp * 100 + FIXED_POINT_BASE/2) / FIXED_POINT_BASE;   
+ 	 //printf ("integer new load_avg: %d\n", load_avg);
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -373,9 +397,9 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return 100 * thread_current()->recent_cpu;
 }
-
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -463,6 +487,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->nice = 0;
+  t->recent_cpu = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

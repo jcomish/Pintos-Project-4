@@ -200,6 +200,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
   int64_t cur;
 
   cur = timer_ticks();
+  
+  // Add code to trigger update on load_avg
+  if (cur % TIMER_FREQ == 0) {
+	thread_set_load_avg();
+  }
   // Add code here to check if any sleeping thread needs waking
   while(!list_empty(&sleep_list)) {
   	struct thread *t = list_entry(list_front(&sleep_list), struct thread, elem);
