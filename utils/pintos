@@ -257,7 +257,7 @@ sub find_disks {
     # Find kernel, if we don't already have one.
     if (!exists $parts{KERNEL}) {
 	###--- Change the string in quotes below to your location of kernel.bin ---### 
-	my $name =  "/home/parallels/SystemsProgramming/Pintos/project4/userprog/build/kernel.bin"; #find_file ('kernel.bin');
+	my $name =  "/home/parallels/SystemsProgramming/Pintos/project4/threads/build/kernel.bin"; #find_file ('kernel.bin');
 	die "Cannot find kernel\n" if !defined $name;
 	do_set_part ('KERNEL', 'file', $name);
     }
@@ -930,15 +930,15 @@ sub exec_setitimer {
     exit (1);
 }
 
-sub SIGVTALRM {
-    use Config;
-    my $i = 0;
-    foreach my $name (split(' ', $Config{sig_name})) {
-	return $i if $name eq 'VTALRM';
-	$i++;
-    }
-    return 0;
-}
+#sub SIGVTALRM {
+#    use Config;
+#    my $i = 0;
+#    foreach my $name (split(' ', $Config{sig_name})) {
+#	return $i if $name eq 'VTALRM';
+#	$i++;
+#    }
+#    return 0;
+#}
 
 # find_in_path ($program)
 #

@@ -21,7 +21,7 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
-/* Sleep List - Threads waiting for an alarm reside in this list*/
+/* Sleeper List - Threads waiting for an alarm reside in this list*/
 static struct list sleep_list;
 
 /* Number of loops per timer tick.
@@ -201,6 +201,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   cur = timer_ticks();
   // Add code here to check if any sleeping thread needs waking
+  // Potential bug, does not account for multiple wakeups
   while(!list_empty(&sleep_list)) {
   	struct thread *t = list_entry(list_front(&sleep_list), struct thread, elem);
 	if (cur >= t->waketime) {
@@ -269,7 +270,7 @@ real_time_sleep (int64_t num, int32_t denom)
     {
       /* Otherwise, use a busy-wait loop for more accurate
          sub-tick timing. */
-      real_time_delay (num, denom); 
+     real_time_delay (num, denom); 
     }
 }
 
