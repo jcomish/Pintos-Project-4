@@ -203,6 +203,7 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  t->nice = 0;
   /* Add to run queue. */
   thread_unblock (t);
 
