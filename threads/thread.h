@@ -115,6 +115,7 @@ extern bool thread_mlfqs;
 
 void increment_mlfqs_cpu();
 void recalculate_mlfq_list();
+void boost();
 bool order_by_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 
@@ -150,7 +151,7 @@ void thread_set_mlfq_nice(int nice UNUSED);
 void thread_set_nice (int);
 
 int thread_get_recent_cpu (void);
-int thread_set_recent_mlfq_cpu(struct thread *t);
+void thread_set_recent_mlfq_cpu(struct thread *t);
 
 int thread_get_load_avg (void);
 

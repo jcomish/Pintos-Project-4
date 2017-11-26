@@ -11,6 +11,8 @@
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
+#define RECALC_FREQ 4
+#define BOOST_FREQ 1000
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19
 #endif
@@ -109,7 +111,6 @@ timer_sleep (int64_t ticks)
   //while (timer_elapsed (start) < ticks) 
   //  thread_yield ();
   enum intr_level old_level = intr_disable();
-
   //critical section does not block kernel
   /*************************CRITICAL SECTION**********************************/
   struct thread *t = thread_current();
@@ -198,8 +199,16 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   int64_t cur;
+  increment_mlfqs_cpu();
 
   cur = timer_ticks();
+  if (ticks % TIMER_FREQ == 0)
+	thread_set_load_avg();
+  if (ticks % RECALC_FREQ == 0)
+	thread_set_mlfq_priority(thread_current());
+  if (ticks % BOOST_FREQ == 0)
+    boost();
+
   // Add code here to check if any sleeping thread needs waking
   // Potential bug, does not account for multiple wakeups
   while(!list_empty(&sleep_list)) {
@@ -211,6 +220,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	  break;
 	}
   }
+  //test_max_priority();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

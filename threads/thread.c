@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -22,6 +23,7 @@
 #define NICE_MIN = -20
 #define NICE_MAX = 20
 
+int load_avg;
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -72,6 +74,29 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+
+/**************************************************************************************
+* Helpers
+**************************************************************************************/
+void increment_mlfqs_cpu() {
+  struct thread *t = thread_current();
+  if (t == idle_thread)
+  	return;
+
+  t->recent_cpu = add_fp_and_int(t->recent_cpu, 1);
+}
+
+void boost() {
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e)) {
+    struct thread *t = list_entry(e, struct thread, allelem);
+	t->priority = PRI_MAX;
+	}
+}
+
+/**************************************************************************************
+* Helpers
+**************************************************************************************/
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -226,7 +251,7 @@ bool order_by_priority(const struct list_elem *a,
                         const struct list_elem *b,
 						void *aux)
 {
-	return (list_entry(a, struct thread, elem)->priority <
+	return (list_entry(a, struct thread, elem)->priority >
 			list_entry(b, struct thread, elem)->priority);
 }
 
@@ -344,13 +369,38 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/*******************************************************************************************
+* PRIORITY
+*******************************************************************************************/
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
   return;
-  //thread_current ()->priority = new_priority;
 }
+
+void
+thread_set_mlfq_priority (struct thread *t)
+{
+  //We don't want to change priority on the idle_thread
+  if (t == idle_thread)
+    return;
+
+    int max = int_to_fp(PRI_MAX);
+    int recent_cpu = divide_fp_by_int(t->recent_cpu, 4);
+    int nice = t->nice * 2;
+
+    t->priority = fp_to_int(subtract_int_from_fp(subtract_fp(max, recent_cpu), nice));
+    
+    //Lets be sure the priority remains in bounds
+    if (t->priority < PRI_MIN)
+      t = PRI_MIN;
+    if (t->priority > PRI_MAX)
+      t = PRI_MAX;
+
+    return;
+}
+
 
 /* Returns the current thread's priority. */
 int
@@ -359,37 +409,86 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
+/*******************************************************************************************
+* END PRIORITY
+*******************************************************************************************/
+/*******************************************************************************************
+* NICE
+*******************************************************************************************/
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 
 {
   thread_current()->nice = nice;
-  thread_set_priority(PRI_MAX - (thread_get_recent_cpu() / 4) - (thread_get_nice() * 2));
+  thread_set_mlfq_priority(thread_current());
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return thread_current()->nice; 
+  int nice = thread_current()->nice;
+  
+  return nice; 
 }
+/*******************************************************************************************
+* END NICE
+*******************************************************************************************/
+/*******************************************************************************************
+* LOAD AVERAGE
+*******************************************************************************************/
+void thread_set_load_avg(void){
+	int ready_threads = list_size(&ready_list);
+	if (thread_current() != idle_thread)
+		ready_threads++;
+
+    int first = multiply_fp(divide_fp_by_int(int_to_fp(59), 60), load_avg);
+    load_avg = add_fp(first, divide_fp_by_int(int_to_fp(ready_threads), 60));
+}
+
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return fp_to_int_round_nearest(multiply_fp_and_int(load_avg, 100)); 
 }
+/*******************************************************************************************
+* END LOAD AVERAGE
+*******************************************************************************************/
+/*******************************************************************************************
+* RECENT CPU
+*******************************************************************************************/
+void
+thread_set_recent_cpu(struct thread *t) {
+  return;
+}
+
+void
+thread_set_recent_mlfq_cpu(struct thread *t) {
+  if (t == idle_thread)
+    return;
+
+  int load_avg_temp = multiply_fp_and_int(load_avg, 2);
+  load_avg_temp = divide_fp(load_avg_temp, add_fp_and_int(load_avg_temp, 1));
+  t->recent_cpu = add_fp_and_int(multiply_fp(load_avg_temp, t->recent_cpu), t->nice);
+
+  return;
+}
+
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return thread_current()->recent_cpu * 100;
+  return fp_to_int_round_nearest(multiply_fp_and_int(thread_current()->recent_cpu, 100));
+
+
+  //return thread_current()->recent_cpu * 100;
 }
+/*******************************************************************************************
+* END RECENT CPU
+*******************************************************************************************/
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
