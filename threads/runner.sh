@@ -3,7 +3,7 @@ make clean;
 make;
 
 cd build;
-
+clear;
 pintos -v -k -T 480 --qemu  -- -q -mlfqs run mlfqs-load-1 < /dev/null 2> tests/threads/mlfqs-load-1.errors > tests/threads/mlfqs-load-1.output
 perl -I../.. ../../tests/threads/mlfqs-load-1.ck tests/threads/mlfqs-load-1 tests/threads/mlfqs-load-1.result
 

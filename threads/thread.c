@@ -19,6 +19,8 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
+#define NICE_MIN = -20
+#define NICE_MAX = 20
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -198,7 +200,6 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
-  t->nice = 0;
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -221,6 +222,15 @@ thread_block (void)
   schedule ();
 }
 
+bool order_by_priority(const struct list_elem *a,
+                        const struct list_elem *b,
+						void *aux)
+{
+	return (list_entry(a, struct thread, elem)->priority <
+			list_entry(b, struct thread, elem)->priority);
+}
+
+
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -238,7 +248,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, &order_by_priority, NULL);
+  //list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -309,7 +320,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+   list_insert_ordered(&ready_list, &cur->elem, &order_by_priority, NULL);
+   //list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -336,7 +348,8 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  return;
+  //thread_current ()->priority = new_priority;
 }
 
 /* Returns the current thread's priority. */
@@ -351,6 +364,7 @@ void
 thread_set_nice (int nice UNUSED) 
 {
   thread_current()->nice = nice;
+  thread_set_priority(PRI_MAX - (thread_get_recent_cpu() / 4) - (thread_get_nice() * 2));
 }
 
 /* Returns the current thread's nice value. */
@@ -374,7 +388,7 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return thread_current()->recent_cpu * 100;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -464,6 +478,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->nice = 0;
+  t->recent_cpu = 0;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
