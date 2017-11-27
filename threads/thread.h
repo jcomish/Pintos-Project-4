@@ -104,14 +104,20 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-    int nice;
-    int recent_cpu;
+	int nice;
+	int recent_cpu;
 };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+void increment_mlfqs_cpu();
+void recalculate_mlfq_list();
+void boost();
+bool order_by_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+
 
 void thread_init (void);
 void thread_start (void);
@@ -138,10 +144,15 @@ void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+void thread_set_mlfq_priority(struct thread *t);
 
 int thread_get_nice (void);
+void thread_set_mlfq_nice(int nice UNUSED);
 void thread_set_nice (int);
+
 int thread_get_recent_cpu (void);
+void thread_set_recent_mlfq_cpu(struct thread *t);
+
 int thread_get_load_avg (void);
 void thread_set_load_avg (void);
 #endif /* threads/thread.h */
