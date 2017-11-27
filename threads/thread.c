@@ -481,7 +481,7 @@ thread_set_recent_mlfq_cpu(struct thread *t) {
 int
 thread_get_recent_cpu (void) 
 {
-  return fp_to_int_round_nearest(multiply_fp_and_int(thread_current()->recent_cpu, 100));
+  return fp_to_int_round_nearest(multiply_fp_and_int(thread_current()->recent_cpu, 1));
 
 
   //return thread_current()->recent_cpu * 100;
