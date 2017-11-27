@@ -199,9 +199,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   int64_t cur;
-  increment_mlfqs_cpu();
 
   cur = timer_ticks();
+  increment_mlfqs_cpu();
   if (ticks % TIMER_FREQ == 0)
 	thread_set_load_avg();
   if (ticks % RECALC_FREQ == 0)
@@ -220,7 +220,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	  break;
 	}
   }
-  //test_max_priority();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
