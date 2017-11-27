@@ -202,8 +202,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   cur = timer_ticks();
   increment_mlfqs_cpu();
-  if (ticks % TIMER_FREQ == 0)
+  if (ticks % TIMER_FREQ == 0) {
 	thread_set_load_avg();
+	recalculate_mlfq_list();
+	}
   if (ticks % RECALC_FREQ == 0)
 	thread_set_mlfq_priority(thread_current());
   if (ticks % BOOST_FREQ == 0)

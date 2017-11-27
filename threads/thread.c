@@ -94,6 +94,23 @@ void boost() {
 	}
 }
 
+void recalculate_mlfq_list() {
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    thread_set_recent_mlfq_cpu(t);
+  }
+}
+
+bool order_by_priority(const struct list_elem *a,
+                       const struct list_elem *b,
+					   void *aux)
+{
+  return (list_entry(a, struct thread, elem)->priority >
+          list_entry(b, struct thread, elem)->priority);
+}
+
 /**************************************************************************************
 * Helpers
 **************************************************************************************/
@@ -247,15 +264,6 @@ thread_block (void)
   schedule ();
 }
 
-bool order_by_priority(const struct list_elem *a,
-                        const struct list_elem *b,
-						void *aux)
-{
-	return (list_entry(a, struct thread, elem)->priority >
-			list_entry(b, struct thread, elem)->priority);
-}
-
-
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -406,7 +414,7 @@ thread_set_mlfq_priority (struct thread *t)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  return thread_current()->priority;
 }
 
 /*******************************************************************************************
@@ -427,9 +435,7 @@ thread_set_nice (int nice UNUSED)
 int
 thread_get_nice (void) 
 {
-  int nice = thread_current()->nice;
-  
-  return nice; 
+  return thread_current()->nice; 
 }
 /*******************************************************************************************
 * END NICE
@@ -481,10 +487,7 @@ thread_set_recent_mlfq_cpu(struct thread *t) {
 int
 thread_get_recent_cpu (void) 
 {
-  return fp_to_int_round_nearest(multiply_fp_and_int(thread_current()->recent_cpu, 1));
-
-
-  //return thread_current()->recent_cpu * 100;
+  return fp_to_int_round_nearest(multiply_fp_and_int(thread_current()->recent_cpu, 100));
 }
 /*******************************************************************************************
 * END RECENT CPU
