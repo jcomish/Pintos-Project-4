@@ -106,6 +106,15 @@ void recalculate_mlfq_list() {
   }
 }
 
+void thread_set_mlfq_priority_for_all(){
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    thread_set_mlfq_priority(t);
+  }
+}
+
 bool order_by_priority(const struct list_elem *a,
                        const struct list_elem *b,
 					   void *aux)
@@ -402,8 +411,7 @@ thread_set_mlfq_priority (struct thread *t)
     int recent_cpu = divide_fp_by_int(t->recent_cpu, 4);
     int nice = t->nice * 2;
 
-    t->priority = fp_to_int(subtract_int_from_fp(subtract_fp(max, recent_cpu), nice));
-    
+    t->priority = fp_to_int(subtract_int_from_fp(subtract_fp(max, recent_cpu), nice)); 
     //Lets be sure the priority remains in bounds
     if (t->priority < PRI_MIN)
       t = PRI_MIN;
@@ -433,8 +441,24 @@ thread_set_nice (int nice UNUSED)
 {
   thread_current()->nice = nice;
   thread_set_mlfq_priority(thread_current());
+//  int current_priority = thread_get_priority();
+//  if (!list_empty(&ready_list)){
+//	  struct thread * thread_with_highest_priority = list_entry (list_pop_front (&ready_list), struct thread, elem);
+//	 if (current_priority < thread_with_highest_priority->priority){
+//		thread_yield();
+//	 }	 
+//  }
 }
 
+void check_thread_yield(void){
+	int current_priority = thread_get_priority();
+	if (!list_empty(&ready_list)){
+		struct thread * front_thread = list_entry(list_pop_front (&ready_list), struct thread, elem);
+		if (current_priority < front_thread->priority){
+			thread_yield();
+		}
+	}
+}
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
@@ -478,7 +502,7 @@ void
 thread_set_recent_mlfq_cpu(struct thread *t) {
   if (t == idle_thread)
     return;
-
+//  printf("load_avg: %d ", load_avg);
   int load_avg_temp = multiply_fp_and_int(load_avg, 2);
   load_avg_temp = divide_fp(load_avg_temp, add_fp_and_int(load_avg_temp, 1));
   t->recent_cpu = add_fp_and_int(multiply_fp(load_avg_temp, t->recent_cpu), t->nice);

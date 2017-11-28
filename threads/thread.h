@@ -149,6 +149,7 @@ void thread_set_mlfq_priority(struct thread *t);
 int thread_get_nice (void);
 void thread_set_mlfq_nice(int nice UNUSED);
 void thread_set_nice (int);
+void check_thread_yield(void);
 
 int thread_get_recent_cpu (void);
 void thread_set_recent_mlfq_cpu(struct thread *t);
